@@ -49,6 +49,10 @@ on:
         description: 'Built image tag'
         value: ${{ jobs.build.outputs.image-tag }}
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   AWS_REGION: {{AWS_REGION}}
   ECR_REGISTRY: {{ECR_REGISTRY}}
