@@ -39,7 +39,7 @@ show_help() {
     echo "  --help               Show this help"
     echo ""
     echo "Secrets configured:"
-    echo "  - MAVEN_SETTINGS_XML : Base64 encoded ~/.m2/settings.xml"
+    echo "  - MAVEN_SETTINGS_XML : Base64 encoded ~/.m2/settings-github.xml (or settings.xml)"
     echo "  - AWS_ROLE_TO_ASSUME : AWS IAM Role ARN for OIDC"
 }
 
@@ -79,12 +79,19 @@ encode_base64() {
 setup_maven_settings() {
     print_header "Setting up Maven settings"
 
-    MAVEN_SETTINGS_PATH="$HOME/.m2/settings.xml"
+    # Try settings-github.xml first, fallback to settings.xml
+    if [ -f "$HOME/.m2/settings-github.xml" ]; then
+        MAVEN_SETTINGS_PATH="$HOME/.m2/settings-github.xml"
+    elif [ -f "$HOME/.m2/settings.xml" ]; then
+        MAVEN_SETTINGS_PATH="$HOME/.m2/settings.xml"
+    else
+        MAVEN_SETTINGS_PATH=""
+    fi
 
-    if [ ! -f "$MAVEN_SETTINGS_PATH" ]; then
-        print_warning "Maven settings.xml not found at $MAVEN_SETTINGS_PATH"
+    if [ -z "$MAVEN_SETTINGS_PATH" ]; then
+        print_warning "Maven settings not found"
         echo ""
-        echo "Create a settings.xml with your repository credentials:"
+        echo "Create ~/.m2/settings-github.xml with your repository credentials:"
         cat << 'EOF'
 <settings>
   <servers>
@@ -97,15 +104,19 @@ setup_maven_settings() {
 </settings>
 EOF
         echo ""
-        read -p "Press Enter after creating settings.xml, or Ctrl+C to abort..."
+        read -p "Press Enter after creating settings file, or Ctrl+C to abort..."
 
-        if [ ! -f "$MAVEN_SETTINGS_PATH" ]; then
-            print_error "settings.xml still not found. Aborting."
+        if [ -f "$HOME/.m2/settings-github.xml" ]; then
+            MAVEN_SETTINGS_PATH="$HOME/.m2/settings-github.xml"
+        elif [ -f "$HOME/.m2/settings.xml" ]; then
+            MAVEN_SETTINGS_PATH="$HOME/.m2/settings.xml"
+        else
+            print_error "Maven settings still not found. Aborting."
             exit 1
         fi
     fi
 
-    print_success "Found settings.xml at $MAVEN_SETTINGS_PATH"
+    print_success "Found Maven settings at $MAVEN_SETTINGS_PATH"
 
     MAVEN_SETTINGS_B64=$(encode_base64 "$MAVEN_SETTINGS_PATH")
 
