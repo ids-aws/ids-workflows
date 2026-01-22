@@ -129,7 +129,7 @@ jobs:
           registry: ${{ steps.ecr.outputs.registry }}
           repository: ${{ steps.ecr.outputs.repo }}
           image-tag: ${{ steps.tag.outputs.value }}
-          extra-tags: ${{ inputs.deploy-env }}
+          extra-tags: latest
           maven-settings-path: ${{ steps.maven.outputs.settings-path }}
 
   deploy:
