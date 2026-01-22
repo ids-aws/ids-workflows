@@ -12,11 +12,21 @@ on:
         required: false
         type: string
         default: ''
+      aws-account-id:
+        description: 'AWS Account ID for ECR'
+        required: false
+        type: string
+        default: '{{AWS_ACCOUNT_ID}}'
+      aws-region:
+        description: 'AWS Region'
+        required: false
+        type: string
+        default: '{{AWS_REGION}}'
       run-tests:
         description: 'Run tests'
         required: false
         type: boolean
-        default: true
+        default: false
       build-push:
         description: 'Build and push image'
         required: false
@@ -53,10 +63,6 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  AWS_REGION: {{AWS_REGION}}
-  ECR_REGISTRY: {{ECR_REGISTRY}}
-
 jobs:
   test:
     name: Tests
@@ -72,8 +78,10 @@ jobs:
           settings-base64: ${{ secrets.MAVEN_SETTINGS_XML }}
 
       - name: Run tests
-        uses: {{ORG_NAME}}/ids-workflows/actions/docker-test@main
+        uses: {{ORG_NAME}}/ids-workflows/actions/docker-build@main
         with:
+          target: test
+          push: 'false'
           maven-settings-path: ${{ steps.maven.outputs.settings-path }}
 
   build:
@@ -99,6 +107,7 @@ jobs:
           REPO="${{ inputs.ecr-repository }}"
           [ -z "$REPO" ] && REPO="app/${{ inputs.service-name }}"
           echo "repo=$REPO" >> $GITHUB_OUTPUT
+          echo "registry=${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com" >> $GITHUB_OUTPUT
 
       - name: Maven settings
         uses: {{ORG_NAME}}/ids-workflows/actions/maven-settings@main
@@ -110,11 +119,14 @@ jobs:
         uses: {{ORG_NAME}}/ids-workflows/actions/ecr-login@main
         with:
           aws-role: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ inputs.aws-region }}
 
       - name: Build & Push
-        uses: {{ORG_NAME}}/ids-workflows/actions/docker-build-push@main
+        uses: {{ORG_NAME}}/ids-workflows/actions/docker-build@main
         with:
-          registry: ${{ env.ECR_REGISTRY }}
+          target: final
+          push: 'true'
+          registry: ${{ steps.ecr.outputs.registry }}
           repository: ${{ steps.ecr.outputs.repo }}
           image-tag: ${{ steps.tag.outputs.value }}
           extra-tags: ${{ inputs.deploy-env }}
@@ -138,12 +150,14 @@ jobs:
           REPO="${{ inputs.ecr-repository }}"
           [ -z "$REPO" ] && REPO="app/${{ inputs.service-name }}"
 
-          echo "uri=${{ env.ECR_REGISTRY }}/$REPO:$TAG" >> $GITHUB_OUTPUT
+          REGISTRY="${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com"
+          echo "uri=$REGISTRY/$REPO:$TAG" >> $GITHUB_OUTPUT
 
       - name: Deploy
         uses: {{ORG_NAME}}/ids-workflows/actions/ecs-deploy@main
         with:
           aws-role: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ inputs.aws-region }}
           cluster-name: ${{ inputs.cluster-prefix }}-${{ inputs.deploy-env }}
           service-name: ${{ inputs.service-name }}
           task-family: ${{ inputs.service-name }}-${{ inputs.deploy-env }}
