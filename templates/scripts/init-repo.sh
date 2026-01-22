@@ -62,57 +62,35 @@ jobs:
       MAVEN_SETTINGS_XML: \${{ secrets.MAVEN_SETTINGS_XML }}
 EOF
 
-# Deploy STG
-cat > "$REPO_PATH/.github/workflows/deploy-stg.yml" << EOF
-name: Deploy STG
+# Release (tag-triggered)
+cat > "$REPO_PATH/.github/workflows/release.yml" << EOF
+name: Release
 on:
-  workflow_dispatch:
-    inputs:
-      image-tag:
-        description: 'Image tag (e.g., sha-abc1234)'
-        required: true
+  push:
+    tags:
+      - 'releases/v*'
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  deploy:
+  release:
     uses: {{ORG_NAME}}/ids-workflows/.github/workflows/ms-pipeline.yml@main
     with:
       service-name: ${SERVICE_NAME}
-      run-tests: false
-      build-push: false
-      deploy-env: stg
-      image-tag: \${{ inputs.image-tag }}
+      run-tests: true
+      build-push: true
+      deploy-env: int
     secrets:
       AWS_ROLE_TO_ASSUME: \${{ secrets.AWS_ROLE_TO_ASSUME }}
-EOF
-
-# Deploy PROD
-cat > "$REPO_PATH/.github/workflows/deploy-prod.yml" << EOF
-name: Deploy PROD
-on:
-  workflow_dispatch:
-    inputs:
-      image-tag:
-        description: 'Image tag (e.g., sha-abc1234)'
-        required: true
-
-jobs:
-  deploy:
-    uses: {{ORG_NAME}}/ids-workflows/.github/workflows/ms-pipeline.yml@main
-    with:
-      service-name: ${SERVICE_NAME}
-      run-tests: false
-      build-push: false
-      deploy-env: prod
-      image-tag: \${{ inputs.image-tag }}
-    secrets:
-      AWS_ROLE_TO_ASSUME: \${{ secrets.AWS_ROLE_TO_ASSUME }}
+      MAVEN_SETTINGS_XML: \${{ secrets.MAVEN_SETTINGS_XML }}
 EOF
 
 echo -e "${GREEN}Done!${NC}"
 echo "Created:"
-echo "  - ci.yml (13 lines)"
-echo "  - build-deploy.yml (17 lines)"
-echo "  - deploy-stg.yml (19 lines)"
-echo "  - deploy-prod.yml (19 lines)"
+echo "  - ci.yml"
+echo "  - build-deploy.yml"
+echo "  - release.yml"
 echo ""
 echo "Next: ./setup-secrets.sh --repo {{ORG_NAME}}/${SERVICE_NAME}"
