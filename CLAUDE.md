@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with this repository.
 
 ## Project Purpose
 
@@ -10,16 +10,23 @@ Reusable GitHub Actions workflows for IDS microservices CI/CD. Multi-org support
 
 1. **Docker-only builds**: No Java/Maven on runners, all builds inside Dockerfile
 2. **Build once, deploy everywhere**: Same image promoted via tag manipulation
-3. **Registry-agnostic**: `docker-build-push` works with any registry (ECR, Docker Hub, GHCR, GCR)
+3. **Registry-agnostic**: `docker-build` works with any registry (ECR, Docker Hub, GHCR, GCR)
 4. **OIDC authentication**: No static AWS credentials
 5. **Template-based config**: Placeholders `{{VAR}}` in `templates/`, rendered via `scripts/render.sh`
+6. **DRY**: Single unified `docker-build` action for tests and production builds
 
 ## Structure
 
 ```
 templates/              # Sources with {{placeholders}}
 ├── .github/workflows/
+│   ├── ms-ci.yml       # CI for PRs (tests + build validation)
+│   └── ms-pipeline.yml # Full pipeline (tests + build + push + deploy)
 ├── actions/
+│   ├── docker-build/   # Unified Docker build action
+│   ├── ecr-login/
+│   ├── ecs-deploy/
+│   └── maven-settings/
 └── scripts/
 
 .github/workflows/      # Generated files
@@ -27,11 +34,28 @@ actions/                # Generated files
 scripts/
 ├── render.sh           # Generates from templates
 ├── init-repo.sh        # Generated
-└── setup-secrets.sh    # Generated
+├── setup-secrets.sh    # Generated
+└── protect-branch.sh   # Branch protection
 
 config.example.sh       # Config template
 config.local.sh         # Local config (gitignored)
 ```
+
+## Shared Workflows
+
+| Workflow | Purpose | Key Inputs |
+|----------|---------|------------|
+| `ms-ci.yml` | PR validation | `run-tests`, `build-validation` |
+| `ms-pipeline.yml` | Full pipeline | `run-tests`, `build-push`, `deploy-env`, `image-tag` |
+
+## Shared Actions
+
+| Action | Purpose | Registry-agnostic |
+|--------|---------|-------------------|
+| `docker-build` | Build & optionally push | ✅ Yes |
+| `ecr-login` | AWS ECR login via OIDC | ECR only |
+| `ecs-deploy` | ECS Fargate deploy | AWS only |
+| `maven-settings` | Prepare settings.xml | - |
 
 ## Development Workflow
 
@@ -49,14 +73,18 @@ config.local.sh         # Local config (gitignored)
 | `{{ORG_NAME}}` | `ids-aws` |
 | `{{AWS_ACCOUNT_ID}}` | `857736876208` |
 | `{{AWS_REGION}}` | `eu-west-1` |
-| `{{ECR_REGISTRY}}` | `857736876208.dkr.ecr.eu-west-1.amazonaws.com` |
 
-## Actions
+## Consumer Repo Workflows
 
-| Action | Purpose | Registry-agnostic |
-|--------|---------|-------------------|
-| `docker-build-push` | Build & push | ✅ Yes |
-| `ecr-login` | AWS ECR login | ECR only |
-| `ecs-deploy` | ECS Fargate deploy | AWS only |
-| `docker-test` | Run tests | - |
-| `maven-settings` | Prepare settings.xml | - |
+Typical setup for a microservice:
+
+```yaml
+# ci.yml - PR validation
+uses: ids-aws/ids-workflows/.github/workflows/ms-ci.yml@main
+
+# release.yml - Release tag triggers build + deploy
+uses: ids-aws/ids-workflows/.github/workflows/ms-pipeline.yml@main
+
+# build-deploy.yml - Manual with options
+uses: ids-aws/ids-workflows/.github/workflows/ms-pipeline.yml@main
+```
