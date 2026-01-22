@@ -73,7 +73,7 @@ flowchart LR
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `ci.yml` | PR → main | Tests + build validation |
+| `ci.yml` | PR → main | Tests uniquement |
 | `release.yml` | Tag `releases/v*` | Tests → Build → Push → Deploy INT |
 | `build-deploy.yml` | 🔘 Manual | Build et/ou deploy vers int/stg/prod |
 
@@ -122,7 +122,7 @@ jobs:
 |-------|------|----------|---------|-------------|
 | `service-name` | string | ✅ | - | Nom du service |
 | `run-tests` | boolean | ❌ | `true` | Exécuter les tests (target: test) |
-| `build-validation` | boolean | ❌ | `true` | Valider le build (target: final, sans push) |
+| `build-validation` | boolean | ❌ | `true` | Valider le build (target: final, sans push). Désactiver pour CI plus rapide (~2 min) |
 
 #### Secrets
 
