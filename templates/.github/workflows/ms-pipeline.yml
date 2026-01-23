@@ -46,7 +46,22 @@ on:
         description: 'ECS cluster prefix'
         required: false
         type: string
-        default: 'ids-cluster'
+        default: 'app'
+      cluster-name:
+        description: 'Override ECS cluster name (default: {prefix}-{env}-cluster)'
+        required: false
+        type: string
+        default: ''
+      ecs-service-name:
+        description: 'Override ECS service name (default: {service}-task-service)'
+        required: false
+        type: string
+        default: ''
+      task-family:
+        description: 'Override task family (default: {service}-task)'
+        required: false
+        type: string
+        default: ''
 
     secrets:
       AWS_ROLE_TO_ASSUME:
@@ -153,13 +168,31 @@ jobs:
           REGISTRY="${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com"
           echo "uri=$REGISTRY/$REPO:$TAG" >> $GITHUB_OUTPUT
 
+      - name: Resolve ECS names
+        id: ecs
+        run: |
+          # Cluster: override or {prefix}-{env}-cluster
+          CLUSTER="${{ inputs.cluster-name }}"
+          [ -z "$CLUSTER" ] && CLUSTER="${{ inputs.cluster-prefix }}-${{ inputs.deploy-env }}-cluster"
+          echo "cluster=$CLUSTER" >> $GITHUB_OUTPUT
+
+          # Service: override or {service}-task-service
+          SERVICE="${{ inputs.ecs-service-name }}"
+          [ -z "$SERVICE" ] && SERVICE="${{ inputs.service-name }}-task-service"
+          echo "service=$SERVICE" >> $GITHUB_OUTPUT
+
+          # Task: override or {service}-task
+          TASK="${{ inputs.task-family }}"
+          [ -z "$TASK" ] && TASK="${{ inputs.service-name }}-task"
+          echo "task=$TASK" >> $GITHUB_OUTPUT
+
       - name: Deploy
         uses: {{ORG_NAME}}/ids-workflows/actions/ecs-deploy@main
         with:
           aws-role: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ inputs.aws-region }}
-          cluster-name: ${{ inputs.cluster-prefix }}-${{ inputs.deploy-env }}
-          service-name: ${{ inputs.service-name }}
-          task-family: ${{ inputs.service-name }}-${{ inputs.deploy-env }}
+          cluster-name: ${{ steps.ecs.outputs.cluster }}
+          service-name: ${{ steps.ecs.outputs.service }}
+          task-family: ${{ steps.ecs.outputs.task }}
           container-name: ${{ inputs.service-name }}
           image-uri: ${{ steps.image.outputs.uri }}
