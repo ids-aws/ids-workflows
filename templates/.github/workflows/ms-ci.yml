@@ -4,9 +4,10 @@ on:
   workflow_call:
     inputs:
       service-name:
-        description: 'Service name for image tagging'
-        required: true
+        description: 'Service name (default: repo name)'
+        required: false
         type: string
+        default: ''
       run-tests:
         description: 'Run tests (target: test)'
         required: false

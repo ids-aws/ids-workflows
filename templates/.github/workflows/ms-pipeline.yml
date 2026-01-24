@@ -4,9 +4,10 @@ on:
   workflow_call:
     inputs:
       service-name:
-        description: 'Service name (e.g., iam-ms)'
-        required: true
+        description: 'Service name (default: repo name)'
+        required: false
         type: string
+        default: ''
       ecr-repository:
         description: 'ECR repository (default: app/{service-name})'
         required: false
@@ -85,9 +86,17 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image-tag: ${{ steps.tag.outputs.value }}
+      service-name: ${{ steps.service.outputs.name }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve service name
+        id: service
+        run: |
+          NAME="${{ inputs.service-name }}"
+          [ -z "$NAME" ] && NAME="${{ github.event.repository.name }}"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Maven settings
         uses: {{ORG_NAME}}/ids-workflows/actions/maven-settings@main
@@ -115,7 +124,7 @@ jobs:
         id: ecr
         run: |
           REPO="${{ inputs.ecr-repository }}"
-          [ -z "$REPO" ] && REPO="app/${{ inputs.service-name }}"
+          [ -z "$REPO" ] && REPO="app/${{ steps.service.outputs.name }}"
           echo "repo=$REPO" >> $GITHUB_OUTPUT
           echo "registry=${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com" >> $GITHUB_OUTPUT
 
@@ -146,6 +155,14 @@ jobs:
     environment: ${{ inputs.deploy-env }}
 
     steps:
+      - name: Resolve service name
+        id: service
+        run: |
+          NAME="${{ needs.build.outputs.service-name }}"
+          [ -z "$NAME" ] && NAME="${{ inputs.service-name }}"
+          [ -z "$NAME" ] && NAME="${{ github.event.repository.name }}"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
       - name: Resolve image
         id: image
         run: |
@@ -153,7 +170,7 @@ jobs:
           [ -z "$TAG" ] && TAG="${{ inputs.image-tag }}"
 
           REPO="${{ inputs.ecr-repository }}"
-          [ -z "$REPO" ] && REPO="app/${{ inputs.service-name }}"
+          [ -z "$REPO" ] && REPO="app/${{ steps.service.outputs.name }}"
 
           REGISTRY="${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com"
           echo "uri=$REGISTRY/$REPO:$TAG" >> $GITHUB_OUTPUT
@@ -168,12 +185,12 @@ jobs:
 
           # Service: override or {service}-task-service
           SERVICE="${{ inputs.ecs-service-name }}"
-          [ -z "$SERVICE" ] && SERVICE="${{ inputs.service-name }}-task-service"
+          [ -z "$SERVICE" ] && SERVICE="${{ steps.service.outputs.name }}-task-service"
           echo "service=$SERVICE" >> $GITHUB_OUTPUT
 
           # Task: override or {service}-task
           TASK="${{ inputs.task-family }}"
-          [ -z "$TASK" ] && TASK="${{ inputs.service-name }}-task"
+          [ -z "$TASK" ] && TASK="${{ steps.service.outputs.name }}-task"
           echo "task=$TASK" >> $GITHUB_OUTPUT
 
       - name: Deploy
@@ -184,5 +201,5 @@ jobs:
           cluster-name: ${{ steps.ecs.outputs.cluster }}
           service-name: ${{ steps.ecs.outputs.service }}
           task-family: ${{ steps.ecs.outputs.task }}
-          container-name: ${{ inputs.service-name }}
+          container-name: ${{ steps.service.outputs.name }}
           image-uri: ${{ steps.image.outputs.uri }}
