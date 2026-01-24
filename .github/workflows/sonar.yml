@@ -28,11 +28,21 @@ on:
         required: false
         type: string
         default: 'src/main/java'
+      tests:
+        description: 'Test source directories'
+        required: false
+        type: string
+        default: 'src/test/java'
       exclusions:
         description: 'Files to exclude from analysis'
         required: false
         type: string
         default: '**/test/**,**/target/**'
+      skip-tests:
+        description: 'Skip tests (no coverage)'
+        required: false
+        type: boolean
+        default: false
 
     secrets:
       SONAR_TOKEN:
@@ -66,8 +76,18 @@ jobs:
         with:
           settings-base64: ${{ secrets.MAVEN_SETTINGS_XML }}
 
-      - name: Build
+      - name: Build and Test with Coverage
+        if: ${{ !inputs.skip-tests }}
+        run: |
+          ./mvnw verify --settings ${{ steps.maven.outputs.settings-path }} \
+            -Dtest='!LiquibaseValidationTest'
+
+      - name: Build only (no tests)
+        if: ${{ inputs.skip-tests }}
         run: ./mvnw compile -DskipTests --settings ${{ steps.maven.outputs.settings-path }}
+
+      - name: Copy dependencies
+        run: ./mvnw dependency:copy-dependencies -DoutputDirectory=target/dependency --settings ${{ steps.maven.outputs.settings-path }}
 
       - name: Resolve project
         id: project
@@ -90,6 +110,10 @@ jobs:
             -Dsonar.projectKey=${{ steps.project.outputs.key }}
             -Dsonar.projectName=${{ steps.project.outputs.name }}
             -Dsonar.sources=${{ inputs.sources }}
+            -Dsonar.tests=${{ inputs.tests }}
             -Dsonar.exclusions=${{ inputs.exclusions }}
             -Dsonar.java.binaries=target/classes
+            -Dsonar.java.libraries=target/dependency/*.jar
+            -Dsonar.java.test.binaries=target/test-classes
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
             -Dsonar.sourceEncoding=UTF-8
