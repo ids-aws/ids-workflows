@@ -35,13 +35,15 @@ fi
 echo -e "${GREEN}Loading config: $CONFIG_FILE${NC}"
 source "$CONFIG_FILE"
 
-# Derive ECR_REGISTRY if not set
+# Derive defaults if not set
 ECR_REGISTRY="${ECR_REGISTRY:-${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com}"
+SONAR_HOST_URL="${SONAR_HOST_URL:-}"
 
 echo "  ORG_NAME=$ORG_NAME"
 echo "  AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
 echo "  AWS_REGION=$AWS_REGION"
 echo "  ECR_REGISTRY=$ECR_REGISTRY"
+[ -n "$SONAR_HOST_URL" ] && echo "  SONAR_HOST_URL=$SONAR_HOST_URL"
 echo ""
 
 # Render function
@@ -55,6 +57,7 @@ render_file() {
         -e "s|{{AWS_ACCOUNT_ID}}|$AWS_ACCOUNT_ID|g" \
         -e "s|{{AWS_REGION}}|$AWS_REGION|g" \
         -e "s|{{ECR_REGISTRY}}|$ECR_REGISTRY|g" \
+        -e "s|{{SONAR_HOST_URL}}|$SONAR_HOST_URL|g" \
         "$src" > "$dst"
 
     # Preserve executable permission

@@ -87,10 +87,28 @@ jobs:
       MAVEN_SETTINGS_XML: \${{ secrets.MAVEN_SETTINGS_XML }}
 EOF
 
+# SonarQube (on push to main)
+cat > "$REPO_PATH/.github/workflows/sonar.yml" << EOF
+name: SonarQube
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sonar:
+    uses: {{ORG_NAME}}/ids-workflows/.github/workflows/sonar.yml@main
+    with:
+      project-key: ${SERVICE_NAME}
+    secrets:
+      SONAR_TOKEN: \${{ secrets.SONAR_TOKEN }}
+      MAVEN_SETTINGS_XML: \${{ secrets.MAVEN_SETTINGS_XML }}
+EOF
+
 echo -e "${GREEN}Done!${NC}"
 echo "Created:"
 echo "  - ci.yml"
 echo "  - build-deploy.yml"
 echo "  - release.yml"
+echo "  - sonar.yml"
 echo ""
 echo "Next: ./setup-secrets.sh --repo {{ORG_NAME}}/${SERVICE_NAME}"
