@@ -38,10 +38,10 @@ on:
         type: string
         default: ''
       image-tag:
-        description: 'Image tag for deployment (if not building)'
+        description: 'Image tag for deployment (default: latest)'
         required: false
         type: string
-        default: ''
+        default: 'latest'
       cluster-prefix:
         description: 'ECS cluster prefix'
         required: false
@@ -160,7 +160,6 @@ jobs:
         run: |
           TAG="${{ needs.build.outputs.image-tag }}"
           [ -z "$TAG" ] && TAG="${{ inputs.image-tag }}"
-          [ -z "$TAG" ] && echo "No image tag!" && exit 1
 
           REPO="${{ inputs.ecr-repository }}"
           [ -z "$REPO" ] && REPO="app/${{ inputs.service-name }}"
