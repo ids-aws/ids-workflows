@@ -63,6 +63,11 @@ on:
         required: false
         type: string
         default: ''
+      build-args:
+        description: 'Docker build args (multiline KEY=VALUE)'
+        required: false
+        type: string
+        default: ''
 
     secrets:
       AWS_ROLE_TO_ASSUME:
@@ -111,6 +116,7 @@ jobs:
           target: test
           push: 'false'
           maven-settings-path: ${{ steps.maven.outputs.settings-path }}
+          build-args: ${{ inputs.build-args }}
 
       - name: Generate tag
         if: inputs.build-push
@@ -146,6 +152,7 @@ jobs:
           image-tag: ${{ steps.tag.outputs.value }}
           extra-tags: latest
           maven-settings-path: ${{ steps.maven.outputs.settings-path }}
+          build-args: ${{ inputs.build-args }}
 
   deploy:
     name: Deploy ${{ inputs.deploy-env }}
