@@ -132,7 +132,12 @@ jobs:
           if [ -n "$PREFIX" ]; then
             # With prefix: {prefix}-sha-xxx, latest, {prefix}
             echo "value=${PREFIX}-sha-$SHA" >> $GITHUB_OUTPUT
-            echo "extra=latest,${PREFIX}" >> $GITHUB_OUTPUT
+            {
+              echo "extra<<EOF"
+              echo "latest"
+              echo "$PREFIX"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
           else
             # Without prefix: sha-xxx, latest
             echo "value=sha-$SHA" >> $GITHUB_OUTPUT
