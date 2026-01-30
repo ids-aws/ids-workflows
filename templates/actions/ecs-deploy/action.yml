@@ -75,7 +75,23 @@ runs:
       if: inputs.wait == 'true'
       shell: bash
       run: |
-        aws ecs wait services-stable \
-          --cluster "${{ inputs.cluster-name }}" \
-          --services "${{ inputs.service-name }}"
-        echo "Service stable"
+        echo "Waiting for service stability (timeout: 20 min)..."
+        # Custom wait loop: 40 attempts × 30s = 20 min (vs default 10 min)
+        for i in {1..40}; do
+          STATUS=$(aws ecs describe-services \
+            --cluster "${{ inputs.cluster-name }}" \
+            --services "${{ inputs.service-name }}" \
+            --query 'services[0].deployments[?status==`PRIMARY`].rolloutState' \
+            --output text)
+
+          if [ "$STATUS" = "COMPLETED" ]; then
+            echo "Service stable after $((i * 30))s"
+            exit 0
+          fi
+
+          echo "Attempt $i/40: $STATUS"
+          sleep 30
+        done
+
+        echo "::error::Service did not stabilize within 20 minutes"
+        exit 1
