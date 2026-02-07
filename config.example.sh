@@ -13,3 +13,7 @@ ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 # SonarQube
 SONAR_HOST_URL="http://ec2-34-249-62-250.eu-west-1.compute.amazonaws.com:9000"
+
+# Azure DevOps
+AZURE_ORG="INNOVAWST"
+AZURE_PROJECT="ZenYaa"

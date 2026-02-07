@@ -38,12 +38,16 @@ source "$CONFIG_FILE"
 # Derive defaults if not set
 ECR_REGISTRY="${ECR_REGISTRY:-${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com}"
 SONAR_HOST_URL="${SONAR_HOST_URL:-}"
+AZURE_ORG="${AZURE_ORG:-}"
+AZURE_PROJECT="${AZURE_PROJECT:-}"
 
 echo "  ORG_NAME=$ORG_NAME"
 echo "  AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
 echo "  AWS_REGION=$AWS_REGION"
 echo "  ECR_REGISTRY=$ECR_REGISTRY"
 [ -n "$SONAR_HOST_URL" ] && echo "  SONAR_HOST_URL=$SONAR_HOST_URL"
+[ -n "$AZURE_ORG" ] && echo "  AZURE_ORG=$AZURE_ORG"
+[ -n "$AZURE_PROJECT" ] && echo "  AZURE_PROJECT=$AZURE_PROJECT"
 echo ""
 
 # Render function
@@ -58,6 +62,8 @@ render_file() {
         -e "s|{{AWS_REGION}}|$AWS_REGION|g" \
         -e "s|{{ECR_REGISTRY}}|$ECR_REGISTRY|g" \
         -e "s|{{SONAR_HOST_URL}}|$SONAR_HOST_URL|g" \
+        -e "s|{{AZURE_ORG}}|$AZURE_ORG|g" \
+        -e "s|{{AZURE_PROJECT}}|$AZURE_PROJECT|g" \
         "$src" > "$dst"
 
     # Preserve executable permission

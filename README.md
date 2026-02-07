@@ -354,6 +354,50 @@ Prépare settings.xml depuis un secret base64.
 
 ---
 
+### `azure-boards-sync.yml` - Azure Boards Sync
+
+Synchronise les événements PR GitHub avec les work items Azure Boards.
+
+```yaml
+jobs:
+  sync:
+    uses: ids-aws/ids-workflows/.github/workflows/azure-boards-sync.yml@main
+    secrets:
+      AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+```
+
+#### Behaviour
+
+| PR Event | Work Item State |
+|----------|----------------|
+| `opened` / `ready_for_review` | → **In Review** |
+| `closed` + merged | → **QA** |
+
+#### Convention
+
+PRs must reference Azure Boards work items using `AB#<id>` in the title or body:
+
+```
+feat(profile): add avatar upload AB#42
+```
+
+#### Inputs
+
+| Input | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `azure-org` | string | ❌ | `INNOVAWST` | Azure DevOps organization |
+| `azure-project` | string | ❌ | `ZenYaa` | Azure DevOps project |
+| `state-on-pr` | string | ❌ | `In Review` | State when PR is opened |
+| `state-on-merge` | string | ❌ | `QA` | State when PR is merged |
+
+#### Secrets
+
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `AZURE_DEVOPS_PAT` | ✅ | PAT with Work Items Read & Write scope |
+
+---
+
 ## Configuration Multi-Org
 
 Le repo utilise des templates avec placeholders pour supporter plusieurs organisations.
@@ -378,6 +422,8 @@ vim config.local.sh  # Adapter les valeurs
 | `{{ORG_NAME}}` | `ids-aws` |
 | `{{AWS_ACCOUNT_ID}}` | `857736876208` |
 | `{{AWS_REGION}}` | `eu-west-1` |
+| `{{AZURE_ORG}}` | `INNOVAWST` |
+| `{{AZURE_PROJECT}}` | `ZenYaa` |
 
 ---
 
@@ -387,6 +433,7 @@ vim config.local.sh  # Adapter les valeurs
 |--------|-------------|
 | `MAVEN_SETTINGS_XML` | `base64 -i settings.xml` |
 | `AWS_ROLE_TO_ASSUME` | ARN rôle IAM OIDC |
+| `AZURE_DEVOPS_PAT` | PAT Azure DevOps (scope: Work Items R/W) |
 
 ---
 
@@ -395,14 +442,16 @@ vim config.local.sh  # Adapter les valeurs
 ```
 ids-workflows/
 ├── .github/workflows/
-│   ├── ms-ci.yml            # Workflow réutilisable CI
-│   ├── ms-pipeline.yml      # Workflow réutilisable pipeline complet
-│   └── check-templates.yml  # CI interne (sync templates)
+│   ├── ms-ci.yml              # Workflow réutilisable CI
+│   ├── ms-pipeline.yml        # Workflow réutilisable pipeline complet
+│   ├── azure-boards-sync.yml  # Sync PR events → Azure Boards
+│   └── check-templates.yml    # CI interne (sync templates)
 ├── actions/
-│   ├── docker-build/        # Build Docker unifié
-│   ├── ecr-login/           # Login ECR OIDC
-│   ├── ecs-deploy/          # Deploy ECS Fargate
-│   └── maven-settings/      # Prépare Maven
+│   ├── azure-boards-update/   # Update Azure Boards work item
+│   ├── docker-build/          # Build Docker unifié
+│   ├── ecr-login/             # Login ECR OIDC
+│   ├── ecs-deploy/            # Deploy ECS Fargate
+│   └── maven-settings/        # Prépare Maven
 ├── templates/               # Sources avec {{placeholders}}
 ├── scripts/
 │   ├── render.sh            # Génère depuis templates
