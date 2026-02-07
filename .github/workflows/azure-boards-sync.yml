@@ -3,6 +3,19 @@ name: Azure Boards Sync
 on:
   workflow_call:
     inputs:
+      target-state:
+        description: 'Target work item state (e.g., In Review, QA)'
+        required: true
+        type: string
+      pr-title:
+        description: 'Pull request title containing AB#<id> references'
+        required: true
+        type: string
+      pr-body:
+        description: 'Pull request body (may contain AB#<id> references)'
+        required: false
+        type: string
+        default: ''
       azure-org:
         description: 'Azure DevOps organization'
         required: false
@@ -13,41 +26,23 @@ on:
         required: false
         type: string
         default: 'ZenYaa'
-      state-on-pr:
-        description: 'Work item state when PR is opened/ready'
-        required: false
-        type: string
-        default: 'In Review'
-      state-on-merge:
-        description: 'Work item state when PR is merged'
-        required: false
-        type: string
-        default: 'QA'
     secrets:
       AZURE_DEVOPS_PAT:
         required: true
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   sync:
-    name: Sync Azure Boards
+    name: Update AB work items → ${{ inputs.target-state }}
     runs-on: ubuntu-latest
-    if: >-
-      github.event.action == 'opened' ||
-      github.event.action == 'ready_for_review' ||
-      (github.event.action == 'closed' && github.event.pull_request.merged == true)
     steps:
       - uses: ids-aws/ids-workflows/actions/azure-boards-update@main
         with:
-          event-action: ${{ github.event.action }}
-          pr-title: ${{ github.event.pull_request.title }}
-          pr-body: ${{ github.event.pull_request.body }}
-          pr-merged: ${{ github.event.pull_request.merged }}
-          state-on-pr: ${{ inputs.state-on-pr }}
-          state-on-merge: ${{ inputs.state-on-merge }}
+          pr-title: ${{ inputs.pr-title }}
+          pr-body: ${{ inputs.pr-body }}
+          target-state: ${{ inputs.target-state }}
           azure-org: ${{ inputs.azure-org }}
           azure-project: ${{ inputs.azure-project }}
           azure-pat: ${{ secrets.AZURE_DEVOPS_PAT }}
