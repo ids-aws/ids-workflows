@@ -47,7 +47,7 @@ config.local.sh         # Local config (gitignored)
 |----------|---------|------------|
 | `ms-ci.yml` | PR validation | `run-tests`, `build-validation` |
 | `ms-pipeline.yml` | Full pipeline | `run-tests`, `build-push`, `deploy-env`, `image-tag` |
-| `azure-boards-sync.yml` | Sync PR events to Azure Boards | `azure-org`, `azure-project`, `state-on-pr`, `state-on-merge` |
+| `azure-boards-sync.yml` | Update Azure Boards work item state | `target-state`, `pr-title`, `pr-body` |
 
 ## Shared Actions
 

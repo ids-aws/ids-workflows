@@ -1,10 +1,7 @@
 name: 'Azure Boards Update'
-description: 'Parse AB#<id> from PR title/body and update work item state in Azure Boards'
+description: 'Parse AB#<id> from text and update work item state in Azure Boards'
 
 inputs:
-  event-action:
-    description: 'GitHub event action (opened, ready_for_review, closed)'
-    required: true
   pr-title:
     description: 'Pull request title'
     required: true
@@ -12,18 +9,9 @@ inputs:
     description: 'Pull request body'
     required: false
     default: ''
-  pr-merged:
-    description: 'Whether the PR was merged'
-    required: false
-    default: 'false'
-  state-on-pr:
-    description: 'Work item state when PR is opened'
-    required: false
-    default: 'In Review'
-  state-on-merge:
-    description: 'Work item state when PR is merged'
-    required: false
-    default: 'QA'
+  target-state:
+    description: 'Target work item state (e.g., In Review, QA)'
+    required: true
   azure-org:
     description: 'Azure DevOps organization'
     required: true
@@ -38,9 +26,6 @@ outputs:
   work-item-ids:
     description: 'Comma-separated list of updated work item IDs'
     value: ${{ steps.update.outputs.ids }}
-  state:
-    description: 'The state that was applied'
-    value: ${{ steps.update.outputs.state }}
 
 runs:
   using: 'composite'
@@ -49,31 +34,16 @@ runs:
       id: update
       shell: bash
       run: |
-        # Determine target state
-        STATE=""
-        if [[ "${{ inputs.event-action }}" == "closed" && "${{ inputs.pr-merged }}" == "true" ]]; then
-          STATE="${{ inputs.state-on-merge }}"
-        elif [[ "${{ inputs.event-action }}" == "opened" || "${{ inputs.event-action }}" == "ready_for_review" ]]; then
-          STATE="${{ inputs.state-on-pr }}"
-        fi
-
-        if [ -z "$STATE" ]; then
-          echo "No state change needed for action: ${{ inputs.event-action }}"
-          echo "ids=" >> $GITHUB_OUTPUT
-          echo "state=" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-
         # Parse AB#<id> from title and body
         IDS=$(printf '%s\n%s' "${{ inputs.pr-title }}" "${{ inputs.pr-body }}" | grep -oE 'AB#[0-9]+' | grep -oE '[0-9]+' | sort -u)
 
         if [ -z "$IDS" ]; then
-          echo "No AB# references found in PR"
+          echo "No AB# references found"
           echo "ids=" >> $GITHUB_OUTPUT
-          echo "state=" >> $GITHUB_OUTPUT
           exit 0
         fi
 
+        STATE="${{ inputs.target-state }}"
         echo "Found work items: $IDS"
         echo "Target state: $STATE"
 
@@ -99,4 +69,3 @@ runs:
         done
 
         echo "ids=$UPDATED" >> $GITHUB_OUTPUT
-        echo "state=$STATE" >> $GITHUB_OUTPUT

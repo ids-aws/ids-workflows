@@ -356,22 +356,22 @@ Prépare settings.xml depuis un secret base64.
 
 ### `azure-boards-sync.yml` - Azure Boards Sync
 
-Synchronise les événements PR GitHub avec les work items Azure Boards.
+Met à jour l'état des work items Azure Boards référencés par `AB#<id>` dans le titre/body d'une PR.
+
+Le workflow est **stateless** : le caller décide de l'état cible (`target-state`). Aucune logique d'événement dans le workflow partagé.
 
 ```yaml
+# Exemple : CI passe → In Review
 jobs:
-  sync:
+  azure-sync:
     uses: ids-aws/ids-workflows/.github/workflows/azure-boards-sync.yml@main
+    with:
+      target-state: 'In Review'
+      pr-title: ${{ github.event.pull_request.title }}
+      pr-body: ${{ github.event.pull_request.body }}
     secrets:
       AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
 ```
-
-#### Behaviour
-
-| PR Event | Work Item State |
-|----------|----------------|
-| `opened` / `ready_for_review` | → **In Review** |
-| `closed` + merged | → **QA** |
 
 #### Convention
 
@@ -385,16 +385,55 @@ feat(profile): add avatar upload AB#42
 
 | Input | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
+| `target-state` | string | ✅ | - | Target work item state (e.g., `In Review`, `QA`) |
+| `pr-title` | string | ✅ | - | PR title (parsed for `AB#<id>`) |
+| `pr-body` | string | ❌ | `''` | PR body (parsed for `AB#<id>`) |
 | `azure-org` | string | ❌ | `INNOVAWST` | Azure DevOps organization |
 | `azure-project` | string | ❌ | `ZenYaa` | Azure DevOps project |
-| `state-on-pr` | string | ❌ | `In Review` | State when PR is opened |
-| `state-on-merge` | string | ❌ | `QA` | State when PR is merged |
 
 #### Secrets
 
 | Secret | Required | Description |
 |--------|----------|-------------|
 | `AZURE_DEVOPS_PAT` | ✅ | PAT with Work Items Read & Write scope |
+
+#### Recommended Consumer Pattern
+
+```yaml
+# .github/workflows/azure-boards.yml (in consumer repo)
+name: Azure Boards Sync
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]  # Trigger after CI passes
+    types: [completed]
+  pull_request:
+    types: [closed]
+
+jobs:
+  on-ci-pass:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
+    uses: ids-aws/ids-workflows/.github/workflows/azure-boards-sync.yml@main
+    with:
+      target-state: 'In Review'
+      pr-title: ${{ github.event.workflow_run.head_commit.message }}
+    secrets:
+      AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+
+  on-merge:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true
+    uses: ids-aws/ids-workflows/.github/workflows/azure-boards-sync.yml@main
+    with:
+      target-state: 'QA'
+      pr-title: ${{ github.event.pull_request.title }}
+      pr-body: ${{ github.event.pull_request.body }}
+    secrets:
+      AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+```
 
 ---
 
