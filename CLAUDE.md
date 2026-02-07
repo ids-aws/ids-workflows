@@ -47,6 +47,7 @@ config.local.sh         # Local config (gitignored)
 |----------|---------|------------|
 | `ms-ci.yml` | PR validation | `run-tests`, `build-validation` |
 | `ms-pipeline.yml` | Full pipeline | `run-tests`, `build-push`, `deploy-env`, `image-tag` |
+| `azure-boards-sync.yml` | Sync PR events to Azure Boards | `azure-org`, `azure-project`, `state-on-pr`, `state-on-merge` |
 
 ## Shared Actions
 
@@ -55,7 +56,9 @@ config.local.sh         # Local config (gitignored)
 | `docker-build` | Build & optionally push | ✅ Yes |
 | `ecr-login` | AWS ECR login via OIDC | ECR only |
 | `ecs-deploy` | ECS Fargate deploy | AWS only |
+| `ecs-restart` | Restart ECS service | AWS only |
 | `maven-settings` | Prepare settings.xml | - |
+| `azure-boards-update` | Update Azure Boards work item state | - |
 
 ## Development Workflow
 
@@ -73,6 +76,8 @@ config.local.sh         # Local config (gitignored)
 | `{{ORG_NAME}}` | `ids-aws` |
 | `{{AWS_ACCOUNT_ID}}` | `857736876208` |
 | `{{AWS_REGION}}` | `eu-west-1` |
+| `{{AZURE_ORG}}` | `INNOVAWST` |
+| `{{AZURE_PROJECT}}` | `ZenYaa` |
 
 ## Consumer Repo Workflows
 

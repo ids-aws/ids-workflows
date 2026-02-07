@@ -1,0 +1,53 @@
+name: Azure Boards Sync
+
+on:
+  workflow_call:
+    inputs:
+      azure-org:
+        description: 'Azure DevOps organization'
+        required: false
+        type: string
+        default: 'INNOVAWST'
+      azure-project:
+        description: 'Azure DevOps project'
+        required: false
+        type: string
+        default: 'ZenYaa'
+      state-on-pr:
+        description: 'Work item state when PR is opened/ready'
+        required: false
+        type: string
+        default: 'In Review'
+      state-on-merge:
+        description: 'Work item state when PR is merged'
+        required: false
+        type: string
+        default: 'QA'
+    secrets:
+      AZURE_DEVOPS_PAT:
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sync:
+    name: Sync Azure Boards
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.action == 'opened' ||
+      github.event.action == 'ready_for_review' ||
+      (github.event.action == 'closed' && github.event.pull_request.merged == true)
+    steps:
+      - uses: ids-aws/ids-workflows/actions/azure-boards-update@main
+        with:
+          event-action: ${{ github.event.action }}
+          pr-title: ${{ github.event.pull_request.title }}
+          pr-body: ${{ github.event.pull_request.body }}
+          pr-merged: ${{ github.event.pull_request.merged }}
+          state-on-pr: ${{ inputs.state-on-pr }}
+          state-on-merge: ${{ inputs.state-on-merge }}
+          azure-org: ${{ inputs.azure-org }}
+          azure-project: ${{ inputs.azure-project }}
+          azure-pat: ${{ secrets.AZURE_DEVOPS_PAT }}

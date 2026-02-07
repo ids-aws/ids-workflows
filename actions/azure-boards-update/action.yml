@@ -1,0 +1,106 @@
+name: 'Azure Boards Update'
+description: 'Parse AB#<id> from PR title/body and update work item state in Azure Boards'
+
+inputs:
+  event-action:
+    description: 'GitHub event action (opened, ready_for_review, closed)'
+    required: true
+  pr-title:
+    description: 'Pull request title'
+    required: true
+  pr-body:
+    description: 'Pull request body'
+    required: false
+    default: ''
+  pr-merged:
+    description: 'Whether the PR was merged'
+    required: false
+    default: 'false'
+  state-on-pr:
+    description: 'Work item state when PR is opened'
+    required: false
+    default: 'In Review'
+  state-on-merge:
+    description: 'Work item state when PR is merged'
+    required: false
+    default: 'QA'
+  azure-org:
+    description: 'Azure DevOps organization'
+    required: true
+  azure-project:
+    description: 'Azure DevOps project'
+    required: true
+  azure-pat:
+    description: 'Azure DevOps PAT with Work Items R/W scope'
+    required: true
+
+outputs:
+  work-item-ids:
+    description: 'Comma-separated list of updated work item IDs'
+    value: ${{ steps.update.outputs.ids }}
+  state:
+    description: 'The state that was applied'
+    value: ${{ steps.update.outputs.state }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Update work items
+      id: update
+      shell: bash
+      run: |
+        # Determine target state
+        STATE=""
+        if [[ "${{ inputs.event-action }}" == "closed" && "${{ inputs.pr-merged }}" == "true" ]]; then
+          STATE="${{ inputs.state-on-merge }}"
+        elif [[ "${{ inputs.event-action }}" == "opened" || "${{ inputs.event-action }}" == "ready_for_review" ]]; then
+          STATE="${{ inputs.state-on-pr }}"
+        fi
+
+        if [ -z "$STATE" ]; then
+          echo "No state change needed for action: ${{ inputs.event-action }}"
+          echo "ids=" >> $GITHUB_OUTPUT
+          echo "state=" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # Parse AB#<id> from title and body
+        TEXT="${{ inputs.pr-title }} ${{ inputs.pr-body }}"
+        IDS=$(echo "$TEXT" | grep -oE 'AB#[0-9]+' | grep -oE '[0-9]+' | sort -u)
+
+        if [ -z "$IDS" ]; then
+          echo "No AB# references found in PR"
+          echo "ids=" >> $GITHUB_OUTPUT
+          echo "state=" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "Found work items: $IDS"
+        echo "Target state: $STATE"
+
+        PAT_B64=$(echo -n ":${{ inputs.azure-pat }}" | base64)
+        ORG="${{ inputs.azure-org }}"
+        PROJECT="${{ inputs.azure-project }}"
+        UPDATED=""
+
+        for ID in $IDS; do
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
+            -H "Authorization: Basic $PAT_B64" \
+            -H "Content-Type: application/json-patch+json" \
+            "https://dev.azure.com/$ORG/$PROJECT/_apis/wit/workitems/$ID?api-version=7.1" \
+            -d "[{\"op\":\"replace\",\"path\":\"/fields/System.State\",\"value\":\"$STATE\"}]")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✓ AB#$ID → $STATE"
+            [ -n "$UPDATED" ] && UPDATED="$UPDATED,$ID" || UPDATED="$ID"
+          else
+            echo "✗ AB#$ID failed ($HTTP_CODE)"
+            echo "$BODY" | head -3
+          fi
+        done
+
+        echo "ids=$UPDATED" >> $GITHUB_OUTPUT
+        echo "state=$STATE" >> $GITHUB_OUTPUT
