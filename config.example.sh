@@ -1,19 +1,19 @@
 #!/bin/bash
-# Configuration template - Copy to config.local.sh and customize
+# Configuration for ids-aws organization
 
 # GitHub Organization
-ORG_NAME="innovds"
+ORG_NAME="ids-aws"
 
-# AWS Configuration (optional, for ECR registry-type only)
-AWS_ACCOUNT_ID=""
-AWS_REGION=""
+# AWS Configuration
+AWS_ACCOUNT_ID="857736876208"
+AWS_REGION="eu-west-1"
 
-# ECR Registry (derived, empty if no AWS)
-ECR_REGISTRY="${AWS_ACCOUNT_ID:+${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com}"
+# ECR Registry (derived)
+ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 # SonarQube
-SONAR_HOST_URL=""
+SONAR_HOST_URL="http://ec2-34-249-62-250.eu-west-1.compute.amazonaws.com:9000"
 
 # Azure DevOps
-AZURE_ORG="innovds"
-AZURE_PROJECT=""
+AZURE_ORG="INNOVAWST"
+AZURE_PROJECT="ZenYaa"

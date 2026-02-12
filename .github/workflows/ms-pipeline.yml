@@ -32,12 +32,12 @@ on:
         description: 'AWS Account ID for ECR'
         required: false
         type: string
-        default: ''
+        default: '857736876208'
       aws-region:
         description: 'AWS Region'
         required: false
         type: string
-        default: ''
+        default: 'eu-west-1'
       run-tests:
         description: 'Run tests'
         required: false
@@ -128,14 +128,14 @@ jobs:
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Maven settings
-        uses: innovds/ids-workflows/actions/maven-settings@main
+        uses: ids-aws/ids-workflows/actions/maven-settings@main
         id: maven
         with:
           settings-base64: ${{ secrets.MAVEN_SETTINGS_XML }}
 
       - name: Run tests
         if: inputs.run-tests
-        uses: innovds/ids-workflows/actions/docker-build@main
+        uses: ids-aws/ids-workflows/actions/docker-build@main
         with:
           target: test
           push: 'false'
@@ -206,7 +206,7 @@ jobs:
 
       - name: Login to ECR
         if: inputs.build-push && inputs.registry-type == 'ecr'
-        uses: innovds/ids-workflows/actions/ecr-login@main
+        uses: ids-aws/ids-workflows/actions/ecr-login@main
         with:
           aws-role: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ inputs.aws-region }}
@@ -221,7 +221,7 @@ jobs:
 
       - name: Build & Push
         if: inputs.build-push
-        uses: innovds/ids-workflows/actions/docker-build@main
+        uses: ids-aws/ids-workflows/actions/docker-build@main
         with:
           target: final
           push: 'true'
@@ -312,7 +312,7 @@ jobs:
           echo "task=$TASK" >> $GITHUB_OUTPUT
 
       - name: Deploy
-        uses: innovds/ids-workflows/actions/ecs-deploy@main
+        uses: ids-aws/ids-workflows/actions/ecs-deploy@main
         with:
           aws-role: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ inputs.aws-region }}
