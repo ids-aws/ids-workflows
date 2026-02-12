@@ -17,7 +17,7 @@ on:
         description: 'SonarQube server URL'
         required: false
         type: string
-        default: ''
+        default: 'http://ec2-34-249-62-250.eu-west-1.compute.amazonaws.com:9000'
       java-version:
         description: 'Java version for analysis'
         required: false
@@ -71,7 +71,7 @@ jobs:
           java-version: ${{ inputs.java-version }}
 
       - name: Maven settings
-        uses: innovds/ids-workflows/actions/maven-settings@main
+        uses: ids-aws/ids-workflows/actions/maven-settings@main
         id: maven
         with:
           settings-base64: ${{ secrets.MAVEN_SETTINGS_XML }}

@@ -34,7 +34,7 @@ on:
 
 jobs:
   ci:
-    uses: innovds/ids-workflows/.github/workflows/ms-ci.yml@main
+    uses: ids-aws/ids-workflows/.github/workflows/ms-ci.yml@main
     with:
       run-tests: true
       build-validation: false
@@ -74,7 +74,7 @@ permissions:
 
 jobs:
   deploy:
-    uses: innovds/ids-workflows/.github/workflows/ms-pipeline.yml@main
+    uses: ids-aws/ids-workflows/.github/workflows/ms-pipeline.yml@main
     with:
       run-tests: ${{ inputs.run-tests }}
       build-push: ${{ inputs.build-image }}
@@ -98,7 +98,7 @@ permissions:
 
 jobs:
   release:
-    uses: innovds/ids-workflows/.github/workflows/ms-pipeline.yml@main
+    uses: ids-aws/ids-workflows/.github/workflows/ms-pipeline.yml@main
     with:
       run-tests: true
       build-push: true
@@ -118,7 +118,7 @@ on:
 
 jobs:
   sonar:
-    uses: innovds/ids-workflows/.github/workflows/sonar.yml@main
+    uses: ids-aws/ids-workflows/.github/workflows/sonar.yml@main
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       MAVEN_SETTINGS_XML: ${{ secrets.MAVEN_SETTINGS_XML }}
@@ -131,4 +131,4 @@ echo "  - build-deploy.yml"
 echo "  - release.yml"
 echo "  - sonar.yml"
 echo ""
-echo "Next: ./setup-secrets.sh --repo innovds/${SERVICE_NAME}"
+echo "Next: ./setup-secrets.sh --repo ids-aws/${SERVICE_NAME}"
