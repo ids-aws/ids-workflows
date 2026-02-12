@@ -35,14 +35,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Maven settings
-        uses: ids-aws/ids-workflows/actions/maven-settings@main
+        uses: innovds/ids-workflows/actions/maven-settings@main
         id: maven
         with:
           settings-base64: ${{ secrets.MAVEN_SETTINGS_XML }}
 
       - name: Run tests
         if: inputs.run-tests
-        uses: ids-aws/ids-workflows/actions/docker-build@main
+        uses: innovds/ids-workflows/actions/docker-build@main
         with:
           target: test
           push: 'false'
@@ -50,7 +50,7 @@ jobs:
 
       - name: Build validation
         if: inputs.build-validation
-        uses: ids-aws/ids-workflows/actions/docker-build@main
+        uses: innovds/ids-workflows/actions/docker-build@main
         with:
           target: final
           push: 'false'

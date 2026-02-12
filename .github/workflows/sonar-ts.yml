@@ -17,7 +17,7 @@ on:
         description: 'SonarQube server URL'
         required: false
         type: string
-        default: 'http://ec2-34-249-62-250.eu-west-1.compute.amazonaws.com:9000'
+        default: ''
       node-version:
         description: 'Node.js version'
         required: false

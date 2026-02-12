@@ -4,8 +4,8 @@
 # For GitHub Organization FREE
 #
 # Usage:
-#   ./setup-secrets.sh --repo ids-aws/iam-ms
-#   ./setup-secrets.sh --repo ids-aws/iam-ms --skip-aws
+#   ./setup-secrets.sh --repo innovds/iam-ms
+#   ./setup-secrets.sh --repo innovds/iam-ms --skip-aws
 #
 
 set -e
@@ -16,8 +16,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-AWS_REGION="eu-west-1"
-AWS_ACCOUNT_ID="857736876208"
+AWS_REGION=""
+AWS_ACCOUNT_ID=""
 SKIP_AWS=false
 AWS_ROLE_ARN=""
 
@@ -33,7 +33,7 @@ show_help() {
     echo "Setup GitHub secrets for a microservice repository."
     echo ""
     echo "Required:"
-    echo "  --repo OWNER/REPO      Repository (e.g., ids-aws/iam-ms)"
+    echo "  --repo OWNER/REPO      Repository (e.g., innovds/iam-ms)"
     echo ""
     echo "Options:"
     echo "  --aws-role-arn ARN     Use existing IAM role ARN (skip OIDC creation)"
@@ -45,8 +45,8 @@ show_help() {
     echo "  - AWS_ROLE_TO_ASSUME : AWS IAM Role ARN for OIDC"
     echo ""
     echo "Examples:"
-    echo "  $0 --repo ids-aws/iam-ms --aws-role-arn arn:aws:iam::857736876208:role/github-actions-role"
-    echo "  $0 --repo ids-aws/iam-ms --skip-aws"
+    echo "  $0 --repo innovds/iam-ms --aws-role-arn arn:aws:iam:::role/github-actions-role"
+    echo "  $0 --repo innovds/iam-ms --skip-aws"
 }
 
 check_prerequisites() {
