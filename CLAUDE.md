@@ -46,7 +46,7 @@ config.local.sh         # Local config (gitignored)
 | Workflow | Purpose | Key Inputs |
 |----------|---------|------------|
 | `ms-ci.yml` | PR validation | `run-tests`, `build-validation` |
-| `ms-pipeline.yml` | Full pipeline | `run-tests`, `build-push`, `deploy-env`, `image-tag` |
+| `ms-pipeline.yml` | Full pipeline | `registry-type`, `repository`, `run-tests`, `build-push`, `deploy-env` |
 | `azure-boards-sync.yml` | Update Azure Boards work item state | `target-state`, `pr-title`, `pr-body` |
 
 ## Shared Actions

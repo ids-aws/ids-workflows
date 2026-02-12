@@ -32,7 +32,8 @@ flowchart TB
     MS_CI --> DOCKER_BUILD
     MS_CI --> MAVEN_SETTINGS
     MS_PIPELINE --> DOCKER_BUILD
-    MS_PIPELINE --> ECR_LOGIN
+    MS_PIPELINE -->|ecr| ECR_LOGIN
+    MS_PIPELINE -->|non-ecr| DOCKER_LOGIN[docker/login-action]
     MS_PIPELINE --> ECS_DEPLOY
     MS_PIPELINE --> MAVEN_SETTINGS
 ```
@@ -134,14 +135,16 @@ jobs:
 
 ### `ms-pipeline.yml` - Full Pipeline
 
-Pipeline complet : tests → build → push → deploy.
+Pipeline complet : tests → build → push → deploy. Supporte ECR, Docker Hub, GHCR, ACR, Nexus, et tout registry générique.
 
+#### Exemples
+
+**ECR (défaut, aucun changement pour les consumers existants) :**
 ```yaml
 jobs:
   pipeline:
     uses: ids-aws/ids-workflows/.github/workflows/ms-pipeline.yml@main
     with:
-      service-name: my-service
       run-tests: true
       build-push: true
       deploy-env: int
@@ -150,26 +153,77 @@ jobs:
       MAVEN_SETTINGS_XML: ${{ secrets.MAVEN_SETTINGS_XML }}
 ```
 
+**Docker Hub :**
+```yaml
+jobs:
+  pipeline:
+    uses: ids-aws/ids-workflows/.github/workflows/ms-pipeline.yml@main
+    with:
+      registry-type: dockerhub
+      repository: myorg/my-service
+      run-tests: true
+      build-push: true
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+```
+
+**GHCR :**
+```yaml
+jobs:
+  pipeline:
+    uses: ids-aws/ids-workflows/.github/workflows/ms-pipeline.yml@main
+    with:
+      registry-type: ghcr
+      repository: myorg/my-service
+      run-tests: true
+      build-push: true
+    secrets:
+      REGISTRY_USERNAME: ${{ github.actor }}
+      REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**Nexus / ACR / Registry maison :**
+```yaml
+jobs:
+  pipeline:
+    uses: ids-aws/ids-workflows/.github/workflows/ms-pipeline.yml@main
+    with:
+      registry-type: nexus          # ou acr, generic
+      registry-url: nexus.company.com:8443
+      repository: my-service
+      run-tests: true
+      build-push: true
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.NEXUS_USER }}
+      REGISTRY_PASSWORD: ${{ secrets.NEXUS_PASS }}
+```
+
 #### Inputs
 
 | Input | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `service-name` | string | ✅ | - | Nom du service |
-| `ecr-repository` | string | ❌ | `app/{service-name}` | Repository ECR |
-| `aws-account-id` | string | ❌ | `857736876208` | ID compte AWS |
-| `aws-region` | string | ❌ | `eu-west-1` | Région AWS |
+| `service-name` | string | ❌ | repo name | Nom du service |
+| `registry-type` | string | ❌ | `ecr` | Type de registry : `ecr`, `dockerhub`, `ghcr`, `acr`, `nexus`, `generic` |
+| `registry-url` | string | ❌ | auto | URL du registry (requis pour acr/nexus/generic) |
+| `repository` | string | ❌ | `app/{service}` (ECR) / `{service}` (autres) | Repository image |
+| `ecr-repository` | string | ❌ | - | _Deprecated: utiliser `repository`_ |
+| `aws-account-id` | string | ❌ | `857736876208` | ID compte AWS (ECR uniquement) |
+| `aws-region` | string | ❌ | `eu-west-1` | Région AWS (ECR uniquement) |
 | `run-tests` | boolean | ❌ | `false` | Exécuter les tests |
 | `build-push` | boolean | ❌ | `false` | Build et push image |
-| `deploy-env` | string | ❌ | `""` | Environnement (int/stg/prod) |
-| `image-tag` | string | ❌ | `""` | Tag image existante (si pas de build) |
-| `cluster-prefix` | string | ❌ | `ids-cluster` | Préfixe cluster ECS |
+| `deploy-env` | string | ❌ | `""` | Environnement (int/stg/prod, ECS uniquement) |
+| `image-tag` | string | ❌ | `latest` | Tag image existante (si pas de build) |
+| `cluster-prefix` | string | ❌ | `app` | Préfixe cluster ECS |
 
 #### Secrets
 
 | Secret | Required | Description |
 |--------|----------|-------------|
-| `AWS_ROLE_TO_ASSUME` | ❌ | ARN du rôle IAM pour OIDC |
+| `AWS_ROLE_TO_ASSUME` | ❌ | ARN du rôle IAM pour OIDC (ECR) |
 | `MAVEN_SETTINGS_XML` | ❌ | settings.xml encodé en base64 |
+| `REGISTRY_USERNAME` | ❌ | Username registry (Docker Hub, GHCR, Nexus, ACR...) |
+| `REGISTRY_PASSWORD` | ❌ | Password/token registry |
 
 #### Outputs
 
@@ -471,7 +525,9 @@ vim config.local.sh  # Adapter les valeurs
 | Secret | Description |
 |--------|-------------|
 | `MAVEN_SETTINGS_XML` | `base64 -i settings.xml` |
-| `AWS_ROLE_TO_ASSUME` | ARN rôle IAM OIDC |
+| `AWS_ROLE_TO_ASSUME` | ARN rôle IAM OIDC (ECR) |
+| `REGISTRY_USERNAME` | Username registry (Docker Hub, GHCR, Nexus, ACR...) |
+| `REGISTRY_PASSWORD` | Password/token registry |
 | `AZURE_DEVOPS_PAT` | PAT Azure DevOps (scope: Work Items R/W) |
 
 ---
@@ -507,6 +563,6 @@ ids-workflows/
 
 1. **Docker-only** : Pas de setup Java/Maven sur runners
 2. **Build once, deploy everywhere** : Même image entre environnements
-3. **Registry-agnostic** : Support ECR, Docker Hub, GHCR...
+3. **Registry-agnostic** : `ms-pipeline.yml` supporte ECR, Docker Hub, GHCR, ACR, Nexus via `registry-type`
 4. **OIDC** : Pas de credentials AWS statiques
 5. **DRY** : Actions et workflows réutilisables

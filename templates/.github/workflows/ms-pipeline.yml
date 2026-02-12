@@ -8,8 +8,23 @@ on:
         required: false
         type: string
         default: ''
+      registry-type:
+        description: 'Registry type: ecr, dockerhub, ghcr, acr, nexus, generic'
+        required: false
+        type: string
+        default: 'ecr'
+      registry-url:
+        description: 'Registry URL (required for acr/nexus/generic, auto-derived for ecr/dockerhub/ghcr)'
+        required: false
+        type: string
+        default: ''
+      repository:
+        description: 'Image repository (default: app/{service-name} for ECR, {service-name} for others)'
+        required: false
+        type: string
+        default: ''
       ecr-repository:
-        description: 'ECR repository (default: app/{service-name})'
+        description: '[Deprecated: use repository] ECR repository'
         required: false
         type: string
         default: ''
@@ -79,6 +94,10 @@ on:
         required: false
       MAVEN_SETTINGS_XML:
         required: false
+      REGISTRY_USERNAME:
+        required: false
+      REGISTRY_PASSWORD:
+        required: false
 
     outputs:
       image-tag:
@@ -144,21 +163,61 @@ jobs:
             echo "extra=latest" >> $GITHUB_OUTPUT
           fi
 
-      - name: ECR repo
+      - name: Resolve registry
         if: inputs.build-push
-        id: ecr
+        id: registry
         run: |
-          REPO="${{ inputs.ecr-repository }}"
-          [ -z "$REPO" ] && REPO="app/${{ steps.service.outputs.name }}"
+          TYPE="${{ inputs.registry-type }}"
+
+          # Resolve registry URL
+          case "$TYPE" in
+            ecr)
+              REGISTRY="${{ inputs.registry-url }}"
+              [ -z "$REGISTRY" ] && REGISTRY="${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com"
+              ;;
+            dockerhub)
+              REGISTRY="docker.io"
+              ;;
+            ghcr)
+              REGISTRY="ghcr.io"
+              ;;
+            *)
+              REGISTRY="${{ inputs.registry-url }}"
+              if [ -z "$REGISTRY" ]; then
+                echo "::error::registry-url is required for registry-type=$TYPE"
+                exit 1
+              fi
+              ;;
+          esac
+
+          # Resolve repository: repository > ecr-repository (compat) > default
+          REPO="${{ inputs.repository }}"
+          [ -z "$REPO" ] && REPO="${{ inputs.ecr-repository }}"
+          if [ -z "$REPO" ]; then
+            if [ "$TYPE" = "ecr" ]; then
+              REPO="app/${{ steps.service.outputs.name }}"
+            else
+              REPO="${{ steps.service.outputs.name }}"
+            fi
+          fi
+
+          echo "url=$REGISTRY" >> $GITHUB_OUTPUT
           echo "repo=$REPO" >> $GITHUB_OUTPUT
-          echo "registry=${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com" >> $GITHUB_OUTPUT
 
       - name: Login to ECR
-        if: inputs.build-push
+        if: inputs.build-push && inputs.registry-type == 'ecr'
         uses: {{ORG_NAME}}/ids-workflows/actions/ecr-login@main
         with:
           aws-role: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ inputs.aws-region }}
+
+      - name: Login to registry
+        if: inputs.build-push && inputs.registry-type != 'ecr'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.registry.outputs.url }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Build & Push
         if: inputs.build-push
@@ -166,8 +225,8 @@ jobs:
         with:
           target: final
           push: 'true'
-          registry: ${{ steps.ecr.outputs.registry }}
-          repository: ${{ steps.ecr.outputs.repo }}
+          registry: ${{ steps.registry.outputs.url }}
+          repository: ${{ steps.registry.outputs.repo }}
           image-tag: ${{ steps.tag.outputs.value }}
           extra-tags: ${{ steps.tag.outputs.extra }}
           maven-settings-path: ${{ steps.maven.outputs.settings-path }}
@@ -209,10 +268,29 @@ jobs:
             fi
           fi
 
-          REPO="${{ inputs.ecr-repository }}"
-          [ -z "$REPO" ] && REPO="app/${{ steps.service.outputs.name }}"
+          # Resolve registry URL
+          TYPE="${{ inputs.registry-type }}"
+          case "$TYPE" in
+            ecr)
+              REGISTRY="${{ inputs.registry-url }}"
+              [ -z "$REGISTRY" ] && REGISTRY="${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com"
+              ;;
+            dockerhub) REGISTRY="docker.io" ;;
+            ghcr) REGISTRY="ghcr.io" ;;
+            *) REGISTRY="${{ inputs.registry-url }}" ;;
+          esac
 
-          REGISTRY="${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com"
+          # Resolve repository
+          REPO="${{ inputs.repository }}"
+          [ -z "$REPO" ] && REPO="${{ inputs.ecr-repository }}"
+          if [ -z "$REPO" ]; then
+            if [ "$TYPE" = "ecr" ]; then
+              REPO="app/${{ steps.service.outputs.name }}"
+            else
+              REPO="${{ steps.service.outputs.name }}"
+            fi
+          fi
+
           echo "uri=$REGISTRY/$REPO:$TAG" >> $GITHUB_OUTPUT
 
       - name: Resolve ECS names

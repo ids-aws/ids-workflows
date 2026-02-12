@@ -8,7 +8,7 @@ inputs:
   aws-region:
     description: 'AWS Region'
     required: false
-    default: 'eu-west-1'
+    default: ''
 
 outputs:
   registry:

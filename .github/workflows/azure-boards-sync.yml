@@ -38,7 +38,7 @@ jobs:
     name: Update AB work items → ${{ inputs.target-state }}
     runs-on: ubuntu-latest
     steps:
-      - uses: ids-aws/ids-workflows/actions/azure-boards-update@main
+      - uses: innovds/ids-workflows/actions/azure-boards-update@main
         with:
           pr-title: ${{ inputs.pr-title }}
           pr-body: ${{ inputs.pr-body }}
