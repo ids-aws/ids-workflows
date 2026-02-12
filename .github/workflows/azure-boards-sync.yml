@@ -20,12 +20,12 @@ on:
         description: 'Azure DevOps organization'
         required: false
         type: string
-        default: 'INNOVAWST'
+        default: 'innovds'
       azure-project:
         description: 'Azure DevOps project'
         required: false
         type: string
-        default: 'ZenYaa'
+        default: ''
     secrets:
       AZURE_DEVOPS_PAT:
         required: true
